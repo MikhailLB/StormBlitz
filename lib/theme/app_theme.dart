@@ -24,6 +24,10 @@ class AppColors {
   static const Color legendary = Color(0xFFFFB23E);
   static const Color rare = Color(0xFF4FA8FF);
   static const Color common = Color(0xFFB9C2D6);
+  static const Color epic = Color(0xFFB05CFF);
+
+  static const Color ambrosia = Color(0xFFFF6FD8);
+  static const Color success = Color(0xFF4CD964);
 }
 
 class AppTheme {
@@ -36,25 +40,26 @@ class AppTheme {
         secondary: AppColors.lightning,
         surface: AppColors.panel,
       ),
-      textTheme: GoogleFonts.rajdhaniTextTheme(base.textTheme).apply(
+      textTheme: GoogleFonts.exo2TextTheme(base.textTheme).apply(
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       ),
     );
   }
 
-  /// Heavy display font used for the logo word-mark and big titles.
-  static TextStyle title(double size, {Color? color}) => GoogleFonts.cinzel(
+  /// Display font used for the logo word-mark, titles and big numbers.
+  static TextStyle title(double size, {Color? color}) =>
+      GoogleFonts.philosopher(
         fontSize: size,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         color: color ?? AppColors.goldLight,
-        letterSpacing: 1.5,
+        letterSpacing: 1.1,
       );
 
   static TextStyle body(double size, {Color? color, FontWeight? weight}) =>
-      GoogleFonts.rajdhani(
+      GoogleFonts.exo2(
         fontSize: size,
-        fontWeight: weight ?? FontWeight.w600,
+        fontWeight: weight ?? FontWeight.w500,
         color: color ?? AppColors.textPrimary,
       );
 

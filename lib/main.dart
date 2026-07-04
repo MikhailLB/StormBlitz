@@ -1,10 +1,15 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
+import 'models/player_profile.dart';
 import 'screens/loading_screen.dart';
+import 'services/profile_repository.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Immersive, dark system bars to match the storm theme.
@@ -18,7 +23,18 @@ void main() {
     ),
   );
 
-  runApp(const StormBlitzApp());
+  // Load the persistent meta-progression before the first frame.
+  final repository = ProfileRepository();
+  final profile = await repository.load();
+  profile.refreshDailyQuests(Random());
+  profile.onMutated = () => repository.save(profile);
+
+  runApp(
+    ChangeNotifierProvider<PlayerProfile>.value(
+      value: profile,
+      child: const StormBlitzApp(),
+    ),
+  );
 }
 
 class StormBlitzApp extends StatelessWidget {

@@ -132,6 +132,30 @@ class _CardDetailDialog extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                     ],
+                    if (card.frenzy) ...[
+                      _infoBox(
+                        icon: Icons.local_fire_department,
+                        text:
+                            'Frenzy — gains +2 Attack the first time it survives damage.',
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (card.lifesteal) ...[
+                      _infoBox(
+                        icon: Icons.water_drop,
+                        text:
+                            'Lifesteal — combat damage dealt by this god heals your hero.',
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (card.divineShield) ...[
+                      _infoBox(
+                        icon: Icons.brightness_high,
+                        text:
+                            'Divine Shield — absorbs the next damage this god would take.',
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     _infoBox(
                       icon: Icons.auto_awesome,
                       text: card.description,

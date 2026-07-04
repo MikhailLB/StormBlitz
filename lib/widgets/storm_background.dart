@@ -13,6 +13,7 @@ class StormBackground extends StatefulWidget {
     this.showArt = true,
     this.darken = 0.55,
     this.showFlash = true,
+    this.intensity = 0.0,
   });
 
   final Widget child;
@@ -22,6 +23,10 @@ class StormBackground extends StatefulWidget {
   /// When false, the periodic lightning flash animation is disabled
   /// (used by the main menu for a calm, static backdrop).
   final bool showFlash;
+
+  /// 0..1: how agitated the storm is. Higher = more frequent, brighter
+  /// lightning (the battle screen raises this as the match drags on).
+  final double intensity;
 
   @override
   State<StormBackground> createState() => _StormBackgroundState();
@@ -43,8 +48,12 @@ class _StormBackgroundState extends State<StormBackground>
   }
 
   void _scheduleFlash() {
-    // Random pause between lightning strikes (3.5s - 8s).
-    final delay = Duration(milliseconds: 3500 + _rng.nextInt(4500));
+    // Random pause between strikes; a raging storm strikes far more often.
+    final calm = 3500 + _rng.nextInt(4500);
+    final raging = 900 + _rng.nextInt(1400);
+    final t = widget.intensity.clamp(0.0, 1.0);
+    final delay =
+        Duration(milliseconds: (calm + (raging - calm) * t).round());
     Future.delayed(delay, () {
       if (!mounted) return;
       _flash.forward(from: 0).then((_) {
@@ -93,8 +102,8 @@ class _StormBackgroundState extends State<StormBackground>
             animation: _flash,
             builder: (_, _) => IgnorePointer(
               child: Container(
-                color: AppColors.lightning
-                    .withValues(alpha: 0.12 * _flash.value),
+                color: AppColors.lightning.withValues(
+                    alpha: (0.12 + 0.10 * widget.intensity) * _flash.value),
               ),
             ),
           ),

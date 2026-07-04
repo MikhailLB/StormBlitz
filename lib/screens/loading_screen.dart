@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
-import 'main_menu_screen.dart';
+import '../widgets/app_transitions.dart';
+import 'home_shell_screen.dart';
 
 /// First screen the player sees. It adapts to BOTH orientations (the rest of
 /// the game is locked to portrait afterwards). A horizontal progress bar fills
@@ -83,12 +84,7 @@ class _LoadingScreenState extends State<LoadingScreen>
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (_, _, _) => const MainMenuScreen(),
-        transitionsBuilder: (_, anim, _, child) =>
-            FadeTransition(opacity: anim, child: child),
-      ),
+      AppTransitions.fade(const HomeShellScreen()),
     );
   }
 

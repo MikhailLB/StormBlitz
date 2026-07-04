@@ -162,12 +162,47 @@ class CardView extends StatelessWidget {
             icon: Icons.water_drop,
           ),
         ),
+        // Divine Shield: golden aura around the portrait.
+        if (card.divineShield)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(width * 0.06),
+                  border: Border.all(
+                      color: AppColors.legendary, width: width * 0.03),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.legendary.withValues(alpha: 0.65),
+                      blurRadius: width * 0.12,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         // Keyword badge (top-right).
         if (card.keyword != Keyword.none)
           Positioned(
             top: 0,
             right: 0,
             child: _keywordBadge(),
+          ),
+        // Bonus perk icons (frenzy / lifesteal), below the keyword badge.
+        if (card.frenzy || card.lifesteal)
+          Positioned(
+            top: card.keyword != Keyword.none ? width * 0.16 : 0,
+            right: 0,
+            child: Column(
+              children: [
+                if (card.frenzy)
+                  _perkIcon(Icons.local_fire_department,
+                      AppColors.attackOrange,
+                      active: card.frenzyTriggered),
+                if (card.lifesteal)
+                  _perkIcon(Icons.water_drop, AppColors.hpRed),
+              ],
+            ),
           ),
         // Attack (bottom-left) & Health (bottom-right).
         Positioned(
@@ -190,6 +225,23 @@ class CardView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _perkIcon(IconData icon, Color color, {bool active = false}) {
+    return Container(
+      margin: EdgeInsets.only(bottom: width * 0.02),
+      padding: EdgeInsets.all(width * 0.025),
+      decoration: BoxDecoration(
+        color: AppColors.background.withValues(alpha: 0.85),
+        shape: BoxShape.circle,
+        border: Border.all(color: color, width: active ? 2 : 1),
+        boxShadow: [
+          if (active)
+            BoxShadow(color: color.withValues(alpha: 0.7), blurRadius: 6),
+        ],
+      ),
+      child: Icon(icon, color: color, size: width * 0.11),
     );
   }
 

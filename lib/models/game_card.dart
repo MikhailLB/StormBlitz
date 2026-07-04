@@ -60,6 +60,11 @@ class GameCard {
     required this.description,
     int? currentHealth,
     this.canAttack = false,
+    this.level = 1,
+    this.divineShield = false,
+    this.frenzy = false,
+    this.lifesteal = false,
+    this.frenzyTriggered = false,
   }) : currentHealth = currentHealth ?? health;
 
   final String id;
@@ -77,6 +82,20 @@ class GameCard {
   final Battlecry battlecry;
   final int battlecryValue;
   final String description;
+
+  /// Collection level this copy was built at (1..5). Purely informational
+  /// in battle; stats are already scaled by CardData.
+  final int level;
+
+  /// Ascension perk (max-level cards): absorbs the next damage taken.
+  bool divineShield;
+
+  /// Frenzy: the first time this minion survives damage it gains +2 Attack.
+  final bool frenzy;
+  bool frenzyTriggered;
+
+  /// Lifesteal: combat damage dealt by this minion heals its hero.
+  final bool lifesteal;
 
   /// False right after being summoned (summoning sickness), unless it has Charge.
   bool canAttack;
@@ -105,6 +124,10 @@ class GameCard {
       description: description,
       currentHealth: health,
       canAttack: keyword == Keyword.charge,
+      level: level,
+      divineShield: divineShield,
+      frenzy: frenzy,
+      lifesteal: lifesteal,
     );
   }
 
