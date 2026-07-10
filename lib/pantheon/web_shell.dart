@@ -287,10 +287,10 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------
 
   String _viewportScript() {
-    // Selector list intentionally covers the common SPA roots but in an
-    // order + naming that is unique to this build. Note: body / html
-    // padding is NOT touched — some responsive designs rely on it to pick
-    // the correct column count.
+    // Same layout-correction logic as sibling builds — safe-area vars
+    // zeroed, viewport-fit added when missing, and known SPA roots +
+    // body/html stripped of their top/side padding. Selector list and
+    // gate flag names are app-local for fingerprinting reasons only.
     return '!function(){'
         'var d=document,r=d.documentElement;'
         "if(r.dataset.sbAvp==='y')return;r.dataset.sbAvp='y';"
@@ -299,6 +299,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         'var targets=['
         "'#app','#root','#__next','#__nuxt','#__layout',"
         "'[data-v-app]','main.main','.game-shell',"
+        "'body','html',"
         '];'
         'var vars=['
         "'--sat','--sar','--sab','--sal',"
@@ -309,10 +310,9 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         'if(softKb())return;'
         "for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],'0px','important');}"
         "var m=d.querySelector('meta[name=viewport]');"
-        "if(!m){m=d.createElement('meta');m.setAttribute('name','viewport');"
-        '(d.head||d.documentElement).appendChild(m);}'
-        "m.setAttribute('content','width=device-width, initial-scale=1.0, "
-        "maximum-scale=1.0, viewport-fit=contain');"
+        "if(m){var c=m.getAttribute('content')||'';"
+        "if(!/viewport-fit/.test(c)){"
+        "m.setAttribute('content',(c?c+', ':'')+'viewport-fit=contain');}}"
         'for(var j=0;j<targets.length;j++){'
         "var e=d.querySelector(targets[j]);"
         "if(e&&e.style){e.style.paddingTop='0';e.style.paddingLeft='0';"
