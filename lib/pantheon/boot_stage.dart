@@ -167,6 +167,11 @@ class _BootStageState extends State<BootStage>
   }
 
   void _onTokenRotated(String token) async {
+    // Skip if AF conversion hasn't arrived yet — the cold boot flow
+    // (_handleColdLane) will compose and dispatch with the fresh token
+    // once awaitConversion() completes. Re-dispatching here before that
+    // would send an empty attribution payload.
+    if (widget.signal.conversion.isEmpty) return;
     final locale = Platform.localeName.replaceAll('-', '_');
     final body = await widget.forge.compose(
       locale: locale, pushToken: token,
