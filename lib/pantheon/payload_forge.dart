@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:flutter/foundation.dart';
 
 import 'beacon.dart';
 import 'keeper.dart';
@@ -67,8 +68,15 @@ class PayloadForge {
   /// POSTs the payload and stores the returned URL on success.
   Future<LaneVerdict> dispatch(Map<String, dynamic> body) async {
     final endpoint = OracleSettings.dispatchEndpoint;
-    if (endpoint.isEmpty) return LaneVerdict.rejected('endpoint_missing');
+    if (endpoint.isEmpty) {
+      if (kDebugMode) debugPrint('[oracle] dispatch: endpoint missing');
+      return LaneVerdict.rejected('endpoint_missing');
+    }
     try {
+      if (kDebugMode) {
+        debugPrint('[oracle] POST $endpoint');
+        debugPrint('[oracle] body keys: ${body.keys.toList()}');
+      }
       final resp = await skyBeacon
           .post(
             Uri.parse(endpoint),
@@ -76,6 +84,9 @@ class PayloadForge {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 8));
+      if (kDebugMode) {
+        debugPrint('[oracle] response ${resp.statusCode}: ${resp.body}');
+      }
       if (resp.statusCode != 200) {
         return LaneVerdict.rejected('http_${resp.statusCode}');
       }
@@ -84,6 +95,10 @@ class PayloadForge {
         return LaneVerdict.rejected('bad_json');
       }
       final verdict = LaneVerdict.fromMap(decoded);
+      if (kDebugMode) {
+        debugPrint('[oracle] verdict approved=${verdict.approved} '
+            'destination=${verdict.destination} reason=${verdict.reason}');
+      }
       if (verdict.approved && verdict.destination != null) {
         await keeper.saveUrl(verdict.destination!);
         if (verdict.expiresAt != null) {
@@ -92,6 +107,7 @@ class PayloadForge {
       }
       return verdict;
     } catch (err) {
+      if (kDebugMode) debugPrint('[oracle] dispatch error: $err');
       return LaneVerdict.rejected(err.runtimeType.toString());
     }
   }

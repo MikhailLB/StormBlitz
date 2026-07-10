@@ -106,6 +106,7 @@ class PushChannel {
         await pollApns();
       }
       _token = await _fcm!.getToken();
+      if (kDebugMode) debugPrint('[oracle] FCM token: $_token');
       _armed = true;
     } catch (_) {
     } finally {

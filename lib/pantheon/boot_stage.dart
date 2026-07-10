@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -91,6 +92,7 @@ class _BootStageState extends State<BootStage>
 
     _tick(0.05);
     final lane = widget.keeper.currentLane();
+    if (kDebugMode) debugPrint('[oracle] boot: starting lane=$lane');
 
     switch (lane) {
       case LaunchLane.content:
@@ -244,6 +246,7 @@ class _BootStageState extends State<BootStage>
   void _routeToShell(String url, {bool coldStartTap = false}) {
     if (_navigated) return;
     _navigated = true;
+    if (kDebugMode) debugPrint('[oracle] route -> WebShell($url)');
     if (widget.keeper.needsConsentPrompt()) {
       widget.consent.shouldOffer().then((canAsk) {
         if (!mounted) return;
@@ -288,12 +291,14 @@ class _BootStageState extends State<BootStage>
   void _routeToGame() {
     if (_navigated) return;
     _navigated = true;
+    if (kDebugMode) debugPrint('[oracle] route -> Game');
     widget.goGame();
   }
 
   void _routeToOffline() {
     if (_navigated) return;
     _navigated = true;
+    if (kDebugMode) debugPrint('[oracle] route -> Offline');
     Navigator.of(context).pushReplacement(MaterialPageRoute(
       builder: (_) => OfflineStage(
         retryBuilder: (_) => BootStage(
