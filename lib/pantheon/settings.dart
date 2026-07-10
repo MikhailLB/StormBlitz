@@ -58,8 +58,12 @@ String revealBlob(List<int> encoded) => _Reveal.open(encoded);
 const List<int> _hostBytes    = <int>[];
 const List<int> _pathBytes    = <int>[];
 const List<int> _gcdBytes     = <int>[];
-const List<int> _afKeyBytes   = <int>[];
-const List<int> _fbProjBytes  = <int>[];
+const List<int> _afKeyBytes   = <int>[
+  92, 52, 98, 233, 136, 227, 197, 161, 78, 89, 87, 70, 33, 35, 3, 100, 27, 80, 25, 235, 0, 246,
+];
+const List<int> _fbProjBytes  = <int>[
+  94, 222, 63, 90, 189, 233, 208, 0, 74, 181, 83, 117,
+];
 
 String _resolveHost() => revealBlob(_hostBytes);
 String _resolvePath() => revealBlob(_pathBytes);
