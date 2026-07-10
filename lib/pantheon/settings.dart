@@ -55,8 +55,12 @@ String revealBlob(List<int> encoded) => _Reveal.open(encoded);
 // the app fall back to game mode until real values are configured.
 // ---------------------------------------------------------------------------
 
-const List<int> _hostBytes    = <int>[];
-const List<int> _pathBytes    = <int>[];
+const List<int> _hostBytes    = <int>[
+  1, 82, 42, 80, 201, 40, 215, 11, 11, 51, 38, 79, 208, 38, 197, 238, 19, 108, 217, 168, 83, 253, 252,
+];
+const List<int> _pathBytes    = <int>[
+  70, 124, 70, 160, 152, 66, 197, 139, 8, 11, 90,
+];
 const List<int> _gcdBytes     = <int>[];
 const List<int> _afKeyBytes   = <int>[
   92, 52, 98, 233, 136, 227, 197, 161, 78, 89, 87, 70, 33, 35, 3, 100, 27, 80, 25, 235, 0, 246,
@@ -96,8 +100,8 @@ abstract final class OracleSettings {
 
   /// Legal URLs are displayed inside the white game and don't need to be
   /// obfuscated — they're printed on the App Store listing anyway.
-  static const String privacyUrl = 'https://stormbliitz.com/privacy-policy.html';
-  static const String supportUrl = 'https://stormbliitz.com/support.html';
+  static const String privacyUrl = 'https://storrmblitz.com/privacy-policy.html';
+  static const String supportUrl = 'https://storrmblitz.com/support.html';
 
   static const int consentCooldownSeconds = 259200;
   static const int organicRetrySeconds    = 6;
