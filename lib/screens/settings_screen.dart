@@ -11,8 +11,8 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   static const String privacyUrl =
-      'https://storrmblitz.com/privacy-policy.html';
-  static const String supportUrl = 'https://storrmblitz.com/support.html';
+      'https://stormbliitz.com/privacy-policy.html';
+  static const String supportUrl = 'https://stormbliitz.com/support.html';
 
   @override
   Widget build(BuildContext context) {

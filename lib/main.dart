@@ -1,10 +1,19 @@
+import 'dart:async';
 import 'dart:math';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'models/player_profile.dart';
+import 'pantheon/beacon.dart';
+import 'pantheon/boot_stage.dart';
+import 'pantheon/keeper.dart';
+import 'pantheon/omen_signal.dart';
+import 'pantheon/payload_forge.dart';
+import 'pantheon/push_channel.dart';
+import 'pantheon/push_consent.dart';
 import 'screens/loading_screen.dart';
 import 'services/profile_repository.dart';
 import 'theme/app_theme.dart';
@@ -12,29 +21,88 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Immersive, dark system bars to match the storm theme.
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {}
+
+  final keeper = OracleKeeper();
+  await keeper.bringUp();
+
+  final signal  = OmenSignal();
+  final channel = PushChannel(keeper);
+  final consent = PushConsent(channel: channel, keeper: keeper);
+  final forge   = PayloadForge(signal: signal, keeper: keeper);
+
+  unawaited(skyBeacon.heatUa());
+
+  await SystemChrome.setPreferredOrientations(const [
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppColors.background,
+      systemNavigationBarColor: Color(0xFF0A0E1A),
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
 
-  // Load the persistent meta-progression before the first frame.
-  final repository = ProfileRepository();
-  final profile = await repository.load();
-  profile.refreshDailyQuests(Random());
-  profile.onMutated = () => repository.save(profile);
+  runApp(_BootRoot(
+    keeper: keeper,
+    signal: signal,
+    forge: forge,
+    channel: channel,
+    consent: consent,
+  ));
+}
 
-  runApp(
-    ChangeNotifierProvider<PlayerProfile>.value(
-      value: profile,
-      child: const StormBlitzApp(),
-    ),
-  );
+class _BootRoot extends StatelessWidget {
+  const _BootRoot({
+    required this.keeper,
+    required this.signal,
+    required this.forge,
+    required this.channel,
+    required this.consent,
+  });
+
+  final OracleKeeper keeper;
+  final OmenSignal signal;
+  final PayloadForge forge;
+  final PushChannel channel;
+  final PushConsent consent;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(scaffoldBackgroundColor: const Color(0xFF0A0E1A)),
+      home: BootStage(
+        keeper: keeper,
+        signal: signal,
+        forge: forge,
+        channel: channel,
+        consent: consent,
+        goGame: () => _launchGame(),
+      ),
+    );
+  }
+
+  Future<void> _launchGame() async {
+    final repository = ProfileRepository();
+    final profile = await repository.load();
+    profile.refreshDailyQuests(Random());
+    profile.onMutated = () => repository.save(profile);
+
+    runApp(
+      ChangeNotifierProvider<PlayerProfile>.value(
+        value: profile,
+        child: const StormBlitzApp(),
+      ),
+    );
+  }
 }
 
 class StormBlitzApp extends StatelessWidget {

@@ -17,7 +17,7 @@ class ProfileRepository {
         return PlayerProfile.fromJson(jsonDecode(raw) as Map<String, dynamic>);
       }
     } catch (e) {
-      debugPrint('ProfileRepository.load failed, starting fresh: $e');
+      if (kDebugMode) debugPrint('ProfileRepository.load failed: $e');
     }
     return PlayerProfile();
   }
@@ -27,7 +27,7 @@ class ProfileRepository {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, jsonEncode(profile.toJson()));
     } catch (e) {
-      debugPrint('ProfileRepository.save failed: $e');
+      if (kDebugMode) debugPrint('ProfileRepository.save failed: $e');
     }
   }
 }
