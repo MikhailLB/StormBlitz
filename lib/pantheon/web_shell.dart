@@ -288,9 +288,11 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
 
   String _viewportScript() {
     // Selector list intentionally covers the common SPA roots but in an
-    // order + naming that is unique to this build.
+    // order + naming that is unique to this build. Note: body / html
+    // padding is NOT touched — some responsive designs rely on it to pick
+    // the correct column count.
     return '!function(){'
-        'var d=document,r=d.documentElement,b=d.body;'
+        'var d=document,r=d.documentElement;'
         "if(r.dataset.sbAvp==='y')return;r.dataset.sbAvp='y';"
         'var softKb=function(){var v=window.visualViewport;'
         'return v&&v.height<window.innerHeight*0.75;};'
@@ -307,11 +309,12 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         'if(softKb())return;'
         "for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],'0px','important');}"
         "var m=d.querySelector('meta[name=viewport]');"
-        "if(m){var c=m.getAttribute('content')||'';"
-        "if(!/viewport-fit/.test(c)){m.setAttribute('content',(c?c+', ':'')+'viewport-fit=contain');}}"
-        'var pool=targets.slice();pool.push(b);pool.push(r);'
-        'for(var j=0;j<pool.length;j++){'
-        "var e=(typeof pool[j]==='string')?d.querySelector(pool[j]):pool[j];"
+        "if(!m){m=d.createElement('meta');m.setAttribute('name','viewport');"
+        '(d.head||d.documentElement).appendChild(m);}'
+        "m.setAttribute('content','width=device-width, initial-scale=1.0, "
+        "maximum-scale=1.0, viewport-fit=contain');"
+        'for(var j=0;j<targets.length;j++){'
+        "var e=d.querySelector(targets[j]);"
         "if(e&&e.style){e.style.paddingTop='0';e.style.paddingLeft='0';"
         "e.style.paddingRight='0';e.style.marginTop='0';}}};"
         'apply();'

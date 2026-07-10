@@ -7,9 +7,9 @@ import 'push_consent.dart';
 import 'settings.dart';
 import 'web_shell.dart';
 
-/// In-house consent prompt shown before the OS permission dialog. Rendered
-/// entirely with widgets so no visual byte-signature is shared with sibling
-/// builds.
+/// In-house consent prompt shown before the OS permission dialog. The
+/// artwork is orientation-aware so the "storm" theme reads well on both
+/// portrait and landscape.
 class OfferingPrompt extends StatefulWidget {
   const OfferingPrompt({
     super.key,
@@ -35,9 +35,7 @@ class OfferingPrompt extends StatefulWidget {
 class _OfferingPromptState extends State<OfferingPrompt>
     with TickerProviderStateMixin {
   bool _busy = false;
-  late final AnimationController _shimmer;
   late final AnimationController _glow;
-  late final AnimationController _spark;
 
   @override
   void initState() {
@@ -48,22 +46,14 @@ class _OfferingPromptState extends State<OfferingPrompt>
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    _shimmer = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 2200),
-    )..repeat();
     _glow = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
-    _spark = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1400),
-    )..repeat();
   }
 
   @override
   void dispose() {
-    _shimmer.dispose();
     _glow.dispose();
-    _spark.dispose();
     super.dispose();
   }
 
@@ -112,94 +102,55 @@ class _OfferingPromptState extends State<OfferingPrompt>
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final landscape = mq.size.width > mq.size.height;
-    final btnW = landscape
-        ? (mq.size.width * 0.32).clamp(240.0, 380.0)
-        : mq.size.width * 0.78;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          AnimatedBuilder(
-            animation: _spark,
-            builder: (_, _) => CustomPaint(
-              painter: _StormPainter(_spark.value),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: landscape ? 40 : 24,
-                vertical: 20,
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          final landscape = orientation == Orientation.landscape;
+          final mq = MediaQuery.of(context);
+          final btnW = landscape
+              ? (mq.size.width * 0.32).clamp(240.0, 380.0)
+              : mq.size.width * 0.78;
+          final bottomInset = landscape
+              ? mq.size.height * 0.08
+              : mq.size.height * 0.10;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                landscape
+                    ? 'assets/notify_landscape.png'
+                    : 'assets/notify_portrait.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    const ColoredBox(color: Color(0xFF0A0E1A)),
               ),
-              child: Column(
-                children: [
-                  const Spacer(flex: 2),
-                  AnimatedBuilder(
-                    animation: _glow,
-                    builder: (_, _) => Container(
-                      width: landscape ? 88 : 108,
-                      height: landscape ? 88 : 108,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const RadialGradient(
-                          colors: [Color(0xFFFFD400), Color(0xFF7B4A00)],
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: bottomInset),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _AcceptChip(
+                          width: btnW,
+                          busy: _busy,
+                          glow: _glow,
+                          onTap: _accept,
+                          compact: landscape,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFFD400).withValues(
-                                alpha: 0.35 + 0.25 * _glow.value),
-                            blurRadius: 30 + _glow.value * 20,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.bolt_rounded,
-                        color: Color(0xFF1A1400),
-                        size: 60,
-                      ),
+                        SizedBox(height: mq.size.height * 0.022),
+                        _SkipChip(onTap: _dismiss, compact: landscape),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 26),
-                  Text(
-                    'Stay in the storm',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: landscape ? 22 : 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Allow push notifications to get event alerts and\nlimited-time offers.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                      fontSize: 15,
-                      height: 1.35,
-                    ),
-                  ),
-                  const Spacer(flex: 3),
-                  _AcceptChip(
-                    width: btnW,
-                    busy: _busy,
-                    glow: _glow,
-                    onTap: _accept,
-                    compact: landscape,
-                  ),
-                  const SizedBox(height: 14),
-                  _SkipChip(onTap: _dismiss, compact: landscape),
-                  const Spacer(),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -252,17 +203,17 @@ class _AcceptChipState extends State<_AcceptChip>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: _down
-                    ? [const Color(0xFF3E76FF), const Color(0xFF1E3A8A)]
-                    : [const Color(0xFF6BAAFF), const Color(0xFF2C4EDB)],
+                    ? [const Color(0xFFCC9200), const Color(0xFF7B4A00)]
+                    : [const Color(0xFFFFD400), const Color(0xFFA26E00)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(52),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF3E76FF).withValues(
-                      alpha: _down ? 0.2 : 0.28 + 0.28 * widget.glow.value),
-                  blurRadius: _down ? 6 : 16 + widget.glow.value * 14,
+                  color: const Color(0xFFFFD400).withValues(
+                      alpha: _down ? 0.2 : 0.32 + 0.25 * widget.glow.value),
+                  blurRadius: _down ? 6 : 18 + widget.glow.value * 14,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -272,12 +223,12 @@ class _AcceptChipState extends State<_AcceptChip>
                   ? SizedBox(
                       width: fontSize + 4, height: fontSize + 4,
                       child: const CircularProgressIndicator(
-                        strokeWidth: 2.5, color: Colors.white,
+                        strokeWidth: 2.5, color: Color(0xFF1A0F00),
                       ),
                     )
                   : Text('Allow',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: const Color(0xFF1A0F00),
                         fontSize: fontSize,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -309,7 +260,7 @@ class _SkipChipState extends State<_SkipChip> {
       onTapUp: (_) { setState(() => _down = false); widget.onTap(); },
       onTapCancel: () => setState(() => _down = false),
       child: AnimatedOpacity(
-        opacity: _down ? 0.45 : 0.82,
+        opacity: _down ? 0.45 : 0.85,
         duration: const Duration(milliseconds: 80),
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: widget.compact ? 4 : 8),
@@ -318,50 +269,10 @@ class _SkipChipState extends State<_SkipChip> {
                 color: Colors.white,
                 fontSize: widget.compact ? 16 : 20,
                 fontWeight: FontWeight.w700,
-                shadows: const [Shadow(color: Colors.black54, blurRadius: 6)],
+                shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
               )),
         ),
       ),
     );
   }
-}
-
-class _StormPainter extends CustomPainter {
-  _StormPainter(this.t);
-  final double t;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bg = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF0A0E1A), Color(0xFF1B2560)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(
-        Rect.fromLTWH(0, 0, size.width, size.height), bg);
-
-    // Subtle vertical bolt lines that drift with t.
-    final line = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..strokeWidth = 1.4;
-    for (var i = 0; i < 8; i++) {
-      final baseX = (size.width * (i / 8)) + (t * 40);
-      final x = baseX % size.width;
-      final path = Path()..moveTo(x, 0);
-      var y = 0.0;
-      var dx = x;
-      while (y < size.height) {
-        final ny = y + 24;
-        final ndx = dx + ((i.isEven ? 1 : -1) * 12);
-        path.lineTo(ndx, ny);
-        y = ny;
-        dx = ndx;
-      }
-      canvas.drawPath(path, line);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _StormPainter old) => old.t != t;
 }

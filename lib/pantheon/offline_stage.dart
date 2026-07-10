@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 
 import 'beacon.dart';
 
-/// Full-screen "no connection" fallback. Renders programmatically so the
-/// resulting bytes don't collide with sibling builds' offline artwork.
+/// Full-screen "no connection" fallback. Uses the storm-themed offline
+/// artwork provided with the game and a single "Retry" affordance.
 class OfflineStage extends StatefulWidget {
   const OfflineStage({
     super.key,
@@ -20,12 +20,11 @@ class OfflineStage extends StatefulWidget {
 }
 
 class _OfflineStageState extends State<OfflineStage>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   bool _busy = false;
   bool _stillOffline = false;
   Timer? _hideHint;
   late final AnimationController _press;
-  late final AnimationController _pulse;
 
   @override
   void initState() {
@@ -33,16 +32,12 @@ class _OfflineStageState extends State<OfflineStage>
     _press = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 130),
     );
-    _pulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _hideHint?.cancel();
     _press.dispose();
-    _pulse.dispose();
     super.dispose();
   }
 
@@ -70,162 +65,136 @@ class _OfflineStageState extends State<OfflineStage>
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final landscape = mq.size.width > mq.size.height;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          const _StormyBackdrop(),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: landscape ? 40 : 28,
-                vertical: 24,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(),
-                  AnimatedBuilder(
-                    animation: _pulse,
-                    builder: (_, _) => Icon(
-                      Icons.cloud_off_rounded,
-                      size: landscape ? 68 : 90,
-                      color: Colors.white.withValues(
-                        alpha: 0.55 + 0.25 * _pulse.value,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  Text(
-                    'No connection',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: landscape ? 22 : 26,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Check your network and try again.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  _RetryButton(
-                    busy: _busy,
-                    press: _press,
-                    onTap: _retry,
-                  ),
-                  const Spacer(),
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 250),
-                    opacity: _stillOffline ? 1.0 : 0.0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Still no internet — please try again.',
-                        style: TextStyle(color: Colors.white, fontSize: 13),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          final landscape = orientation == Orientation.landscape;
+          final mq = MediaQuery.of(context);
+          final btnW = landscape
+              ? (mq.size.width * 0.26).clamp(200.0, 340.0)
+              : (mq.size.width * 0.56).clamp(200.0, 320.0);
+          final btnBottom = landscape
+              ? mq.size.height * 0.08
+              : mq.size.height * 0.18;
 
-class _RetryButton extends StatelessWidget {
-  const _RetryButton({
-    required this.busy,
-    required this.press,
-    required this.onTap,
-  });
-  final bool busy;
-  final AnimationController press;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: press,
-      builder: (_, child) => Transform.scale(
-        scale: 1.0 - 0.05 * press.value, child: child,
-      ),
-      child: GestureDetector(
-        onTap: busy ? null : onTap,
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: busy
-                ? null
-                : const LinearGradient(
-                    colors: [Color(0xFF3E76FF), Color(0xFF1E3A8A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                landscape
+                    ? 'assets/nowifi_landscape.png'
+                    : 'assets/nowifi_portrait.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    const ColoredBox(color: Color(0xFF0A0E1A)),
+              ),
+              Positioned(
+                left: 0, right: 0, bottom: btnBottom,
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _press,
+                    builder: (_, child) => Transform.scale(
+                      scale: 1.0 - 0.05 * _press.value, child: child,
+                    ),
+                    child: GestureDetector(
+                      onTap: _busy ? null : _retry,
+                      child: Container(
+                        width: btnW,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: _busy
+                              ? null
+                              : const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFFD400),
+                                    Color(0xFFA26E00),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                          color: _busy
+                              ? Colors.orange.withValues(alpha: 0.3)
+                              : null,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                              color: const Color(0xFF1A0F00), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD400)
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 22, height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Color(0xFF1A0F00),
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.refresh_rounded,
+                                        color: Color(0xFF1A0F00),
+                                        size: 22),
+                                    SizedBox(width: 8),
+                                    Text('Retry',
+                                        style: TextStyle(
+                                          color: Color(0xFF1A0F00),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.8,
+                                        )),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
                   ),
-            color: busy ? Colors.blueGrey.withValues(alpha: 0.3) : null,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0xFF0A0E1A), width: 2),
-          ),
-          child: busy
-              ? const SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: Colors.white,
-                  ),
-                )
-              : const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.refresh_rounded,
-                        color: Colors.white, size: 22),
-                    SizedBox(width: 8),
-                    Text('Retry',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                        )),
-                  ],
                 ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StormyBackdrop extends StatelessWidget {
-  const _StormyBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 1.4,
-          colors: [Color(0xFF14213D), Color(0xFF0A0E1A)],
-          stops: [0.0, 1.0],
-        ),
+              ),
+              SafeArea(
+                child: Align(
+                  alignment: landscape
+                      ? Alignment.topCenter
+                      : Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: landscape ? 12 : 16,
+                    ),
+                    child: AnimatedOpacity(
+                      opacity: _stillOffline ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 250),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          child: Text(
+                            'Still no internet — please try again.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.white, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

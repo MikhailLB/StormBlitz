@@ -43,11 +43,8 @@ class BootStage extends StatefulWidget {
   State<BootStage> createState() => _BootStageState();
 }
 
-class _BootStageState extends State<BootStage>
-    with SingleTickerProviderStateMixin {
-  double _progress = 0.0;
+class _BootStageState extends State<BootStage> {
   bool _navigated = false;
-  late final AnimationController _spinner;
 
   @override
   void initState() {
@@ -56,23 +53,18 @@ class _BootStageState extends State<BootStage>
       DeviceOrientation.portraitUp, DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight,
     ]);
-    _spinner = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1600),
-    )..repeat();
     _boot();
   }
 
   @override
   void dispose() {
     widget.channel.onTokenRotated = null;
-    _spinner.dispose();
     super.dispose();
   }
 
-  void _tick(double v) {
-    if (!mounted) return;
-    setState(() => _progress = v);
-  }
+  // Progress is intentionally not surfaced — the visual is the same loading
+  // artwork as the game's LoadingScreen so the transition is seamless.
+  void _tick(double _) {}
 
   Future<void> _boot() async {
     widget.channel.onTokenRotated = _onTokenRotated;
@@ -315,142 +307,26 @@ class _BootStageState extends State<BootStage>
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final landscape = mq.orientation == Orientation.landscape;
-    final barWidth = landscape
-        ? (mq.size.height * 0.42).clamp(0.0, 200.0)
-        : (mq.size.width * 0.72).clamp(0.0, 360.0);
-
+    // The boot stage reuses the game's LoadingScreen artwork so the user
+    // never sees a distinct "attribution loader" — the visual is seamless
+    // from cold-start through to the white game.
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          _BootBackdrop(landscape: landscape),
-          Positioned(
-            left: 0, right: 0,
-            bottom: landscape ? 32 : mq.padding.bottom + 42,
-            child: Center(
-              child: SizedBox(
-                width: barWidth,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _spinner,
-                      builder: (_, _) => CustomPaint(
-                        size: Size(barWidth, 10),
-                        painter: _ProgressBarPainter(
-                          value: _progress,
-                          phase: _spinner.value,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Preparing storm…',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.75),
-                        fontSize: 13,
-                        letterSpacing: 0.6,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          final asset = orientation == Orientation.portrait
+              ? 'assets/Vertical_LoadingScreen.webp'
+              : 'assets/Horizontal_LoadingScreen.webp';
+          return Image.asset(
+            asset,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, _, _) =>
+                const ColoredBox(color: Color(0xFF0A0E1A)),
+          );
+        },
       ),
     );
   }
-}
-
-class _BootBackdrop extends StatelessWidget {
-  const _BootBackdrop({required this.landscape});
-  final bool landscape;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.center,
-              radius: 1.2,
-              colors: [Color(0xFF1B2560), Color(0xFF0A0E1A)],
-            ),
-          ),
-        ),
-        Center(
-          child: Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: landscape ? 60 : 34),
-            child: Icon(
-              Icons.bolt_rounded,
-              color: Colors.white.withValues(alpha: 0.85),
-              size: landscape ? 100 : 130,
-              shadows: const [
-                Shadow(color: Color(0x88FFD400), blurRadius: 40),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProgressBarPainter extends CustomPainter {
-  _ProgressBarPainter({required this.value, required this.phase});
-  final double value;
-  final double phase;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      Offset.zero & size, const Radius.circular(6),
-    );
-    canvas.drawRRect(
-      rrect,
-      Paint()..color = Colors.white.withValues(alpha: 0.10),
-    );
-
-    final filledWidth = (size.width * value.clamp(0.0, 1.0));
-    if (filledWidth <= 0) return;
-
-    final fill = Rect.fromLTWH(0, 0, filledWidth, size.height);
-    canvas.save();
-    canvas.clipRRect(rrect);
-    canvas.drawRect(
-      fill,
-      Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFF3E76FF), Color(0xFFFFD400)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ).createShader(fill),
-    );
-
-    // Shimmer sweep synced with [phase].
-    final shimmerX = (phase * (filledWidth + 60)) - 30;
-    final shimmerRect = Rect.fromLTWH(shimmerX, 0, 40, size.height);
-    final shimmerPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          Colors.white.withValues(alpha: 0.0),
-          Colors.white.withValues(alpha: 0.45),
-          Colors.white.withValues(alpha: 0.0),
-        ],
-      ).createShader(shimmerRect);
-    canvas.drawRect(shimmerRect, shimmerPaint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _ProgressBarPainter old) =>
-      old.value != value || old.phase != phase;
 }

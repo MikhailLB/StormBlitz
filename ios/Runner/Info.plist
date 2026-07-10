@@ -30,6 +30,12 @@
 	<true/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We use this identifier to personalise in-game events, tailor rewards to your play style, and measure which campaigns bring the best players to Storm Blitz.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Storm Blitz uses the camera to let you take photos when a partner promotion asks to verify your entry (for example, a bonus quest that requires a snapshot).</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Storm Blitz needs photo library access so you can attach existing images when a partner promotion or support request requires it.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Storm Blitz uses the microphone when a partner promotion records short audio clips as part of an entry, for example a voice-over challenge.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
