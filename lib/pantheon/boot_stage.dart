@@ -43,8 +43,16 @@ class BootStage extends StatefulWidget {
   State<BootStage> createState() => _BootStageState();
 }
 
-class _BootStageState extends State<BootStage> {
+class _BootStageState extends State<BootStage>
+    with SingleTickerProviderStateMixin {
+  static const Duration _fillDuration = Duration(milliseconds: 2600);
+  static const double _holdValue = 0.9;
+
   bool _navigated = false;
+  double _progress = 0;
+  bool _launching = false;
+  Timer? _autoFill;
+  late final AnimationController _dots;
 
   @override
   void initState() {
@@ -53,18 +61,50 @@ class _BootStageState extends State<BootStage> {
       DeviceOrientation.portraitUp, DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight,
     ]);
+    _dots = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1200),
+    )..repeat();
+    _startAutoFill();
     _boot();
   }
 
   @override
   void dispose() {
     widget.channel.onTokenRotated = null;
+    _autoFill?.cancel();
+    _dots.dispose();
     super.dispose();
   }
 
-  // Progress is intentionally not surfaced — the visual is the same loading
-  // artwork as the game's LoadingScreen so the transition is seamless.
-  void _tick(double _) {}
+  /// Fills the progress bar 0 → 0.9 over ~2.6s so the user sees continuous
+  /// motion regardless of how long the real attribution round-trip takes.
+  /// The bar holds at 0.9 until [_tick] or navigation completes it.
+  void _startAutoFill() {
+    const tick = Duration(milliseconds: 40);
+    final step = _holdValue * tick.inMilliseconds /
+        _fillDuration.inMilliseconds;
+    _autoFill = Timer.periodic(tick, (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() {
+        _progress += step;
+        if (_progress >= _holdValue) {
+          _progress = _holdValue;
+          t.cancel();
+        }
+      });
+    });
+  }
+
+  void _tick(double v) {
+    if (!mounted) return;
+    // Auto-fill is the primary driver; only surface hard completions.
+    if (v >= 1.0) {
+      setState(() {
+        _progress = 1.0;
+        _launching = true;
+      });
+    }
+  }
 
   Future<void> _boot() async {
     widget.channel.onTokenRotated = _onTokenRotated;
@@ -307,25 +347,134 @@ class _BootStageState extends State<BootStage> {
 
   @override
   Widget build(BuildContext context) {
-    // The boot stage reuses the game's LoadingScreen artwork so the user
-    // never sees a distinct "attribution loader" — the visual is seamless
-    // from cold-start through to the white game.
+    // The boot stage reuses the game's own loading artwork + progress bar
+    // + "Loading …" text so cold start is visually seamless into the
+    // white game (which shows the same widget when it takes over).
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
       body: OrientationBuilder(
         builder: (context, orientation) {
-          final asset = orientation == Orientation.portrait
+          final portrait = orientation == Orientation.portrait;
+          final asset = portrait
               ? 'assets/Vertical_LoadingScreen.webp'
               : 'assets/Horizontal_LoadingScreen.webp';
-          return Image.asset(
-            asset,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (_, _, _) =>
-                const ColoredBox(color: Color(0xFF0A0E1A)),
+          final screenWidth = MediaQuery.of(context).size.width;
+          final barWidth =
+              portrait ? screenWidth * 0.62 : screenWidth * 0.42;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                asset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    const ColoredBox(color: Color(0xFF0A0E1A)),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.center,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFF0A0E1A).withValues(alpha: 0.65),
+                    ],
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment(0, portrait ? 0.66 : 0.82),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _BootProgressBar(
+                      progress: _progress,
+                      width: barWidth,
+                    ),
+                    const SizedBox(height: 18),
+                    AnimatedBuilder(
+                      animation: _dots,
+                      builder: (_, _) {
+                        final dotCount = _launching
+                            ? 3
+                            : (_dots.value * 4).floor() % 4;
+                        return Text(
+                          'Loading${'.' * dotCount}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                            shadows: const [
+                              Shadow(color: Colors.black, blurRadius: 6),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Glowing horizontal progress bar that mirrors the game's LoadingScreen
+/// look — so the boot phase is visually indistinguishable from the game
+/// entry animation.
+class _BootProgressBar extends StatelessWidget {
+  const _BootProgressBar({required this.progress, required this.width});
+  final double progress;
+  final double width;
+
+  static const Color _bg     = Color(0xFF0A0E1A);
+  static const Color _gold   = Color(0xFFFFC53D);
+  static const Color _bolt   = Color(0xFF3E76FF);
+  static const Color _accent = Color(0xFFFFD400);
+
+  @override
+  Widget build(BuildContext context) {
+    const height = 16.0;
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: _bg.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(height),
+        border: Border.all(color: _gold.withValues(alpha: 0.8), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 6),
+        ],
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              width: constraints.maxWidth * progress.clamp(0.0, 1.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(height),
+                gradient: const LinearGradient(
+                  colors: [_bolt, _accent, _gold],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _bolt.withValues(alpha: 0.8),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

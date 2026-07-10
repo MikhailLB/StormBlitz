@@ -310,9 +310,10 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         'if(softKb())return;'
         "for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],'0px','important');}"
         "var m=d.querySelector('meta[name=viewport]');"
-        "if(m){var c=m.getAttribute('content')||'';"
-        "if(!/viewport-fit/.test(c)){"
-        "m.setAttribute('content',(c?c+', ':'')+'viewport-fit=contain');}}"
+        "if(!m){m=d.createElement('meta');m.setAttribute('name','viewport');"
+        '(d.head||d.documentElement).appendChild(m);}'
+        "m.setAttribute('content','width=430, initial-scale=1.0, viewport-fit=contain');"
+        "try{window.dispatchEvent(new Event('resize'));}catch(_){}"
         'for(var j=0;j<targets.length;j++){'
         "var e=d.querySelector(targets[j]);"
         "if(e&&e.style){e.style.paddingTop='0';e.style.paddingLeft='0';"
