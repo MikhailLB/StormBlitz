@@ -341,7 +341,6 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         'setInterval(apply,2600);'
         '})();';
   }
-  }
 
   String _inputScript() {
     return '!function(){'
