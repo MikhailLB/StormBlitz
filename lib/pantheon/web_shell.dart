@@ -433,8 +433,6 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final safe = MediaQuery.of(context).viewPadding;
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -450,12 +448,9 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
               Padding(
                 padding: EdgeInsets.only(
                   top: safe.top,
-                  bottom: isLandscape
-                      ? (safe.bottom > 0 ? 8.0 : 0.0)
-                      : safe.bottom,
-                  // Landscape: camera/notch side only, right side = 0.
+                  bottom: safe.bottom,
                   left: safe.left,
-                  right: isLandscape ? 0.0 : safe.right,
+                  right: safe.right,
                 ),
                 child: WebViewWidget(controller: _wv),
               )
