@@ -12,6 +12,7 @@ import 'beacon.dart';
 import 'keeper.dart';
 import 'offline_stage.dart';
 import 'push_channel.dart';
+import 'settings.dart';
 
 /// Full-screen WebView shell. Reached after the boot decides on "content"
 /// lane. Applies platform-specific configuration + a set of DOM patches
@@ -158,9 +159,10 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       } catch (_) {}
     };
 
-    _connSub = skyBeacon.watch().listen((online) {
-      if (!online) _routeOfflineIfNeeded();
-    });
+    _connSub = skyBeacon.watch().listen(
+      (online) { if (!online) _routeOfflineIfNeeded(); },
+      onError: (_) {},
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _drainOneShot());
   }
@@ -175,6 +177,15 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
     }
   }
 
+  void _showSettingsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      builder: (_) => const _WebSettingsSheet(),
+    );
+  }
+
   NavigationDelegate _buildDelegate() {
     return NavigationDelegate(
       onPageStarted: (_) {},
@@ -184,6 +195,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         _injectInputPatch();
         _injectViewportPatch();
         Future.delayed(const Duration(milliseconds: 800), () {
+          if (!mounted || _offlineRouted) return;
           final needsReload = widget.coldStartTap && !_coldReloadDone;
           if (needsReload) _coldReloadDone = true;
           _refreshViewport();
@@ -195,6 +207,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         if (!_firstPaintFired) {
           _firstPaintFired = true;
           Future.delayed(const Duration(milliseconds: 600), () {
+            if (!mounted) return;
             try { widget.onFirstPaint?.call(); } catch (_) {}
           });
         }
@@ -207,7 +220,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
             err.errorCode == -1007 || err.errorCode == -9;
         if (loop && _lastMainFrameUrl != null && _redirectRetries < 3) {
           _redirectRetries++;
-          _wv.loadRequest(Uri.parse(_lastMainFrameUrl!));
+          try { _wv.loadRequest(Uri.parse(_lastMainFrameUrl!)); } catch (_) {}
           return;
         }
         _routeOfflineIfNeeded();
@@ -257,21 +270,31 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   }
 
   Future<void> _routeOfflineIfNeeded() async {
+    // Guard must be set synchronously before any await so that concurrent
+    // callers (rapid WebResourceErrors on wifi drop) never both proceed.
     if (_offlineRouted) return;
-    final ok = await skyBeacon.reachable();
-    if (ok || !mounted) return;
     _offlineRouted = true;
-    final current = await _wv.currentUrl() ?? widget.destination;
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => OfflineStage(
-        retryBuilder: (_) => WebShell(
-          destination: current,
-          keeper: widget.keeper,
-          channel: widget.channel,
+    try {
+      final ok = await skyBeacon.reachable();
+      if (ok || !mounted) {
+        _offlineRouted = false; // still online — allow future checks
+        return;
+      }
+      String current = widget.destination;
+      try { current = await _wv.currentUrl() ?? widget.destination; } catch (_) {}
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => OfflineStage(
+          retryBuilder: (_) => WebShell(
+            destination: current,
+            keeper: widget.keeper,
+            channel: widget.channel,
+          ),
         ),
-      ),
-    ));
+      ));
+    } catch (_) {
+      _offlineRouted = false;
+    }
   }
 
   Future<void> _launchOutside(Uri uri) async {
@@ -287,45 +310,48 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------
 
   String _viewportScript() {
-    // Same layout-correction logic as sibling builds — safe-area vars
-    // zeroed, viewport-fit added when missing, and known SPA roots +
-    // body/html stripped of their top/side padding. Selector list and
-    // gate flag names are app-local for fingerprinting reasons only.
-    return '!function(){'
-        'var d=document,r=d.documentElement;'
-        "if(r.dataset.sbAvp==='y')return;r.dataset.sbAvp='y';"
-        'var softKb=function(){var v=window.visualViewport;'
-        'return v&&v.height<window.innerHeight*0.75;};'
-        'var targets=['
-        "'#app','#root','#__next','#__nuxt','#__layout',"
-        "'[data-v-app]','main.main','.game-shell',"
-        "'body','html',"
-        '];'
-        'var vars=['
-        "'--sat','--sar','--sab','--sal',"
-        "'--safe-area-inset-top','--safe-area-inset-right',"
-        "'--safe-area-inset-bottom','--safe-area-inset-left',"
-        '];'
-        'var apply=function(){'
-        'if(softKb())return;'
-        "for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],'0px','important');}"
-        "var m=d.querySelector('meta[name=viewport]');"
-        "if(!m){m=d.createElement('meta');m.setAttribute('name','viewport');"
-        '(d.head||d.documentElement).appendChild(m);}'
-        "m.setAttribute('content','width=430, initial-scale=1.0, viewport-fit=contain');"
-        "try{window.dispatchEvent(new Event('resize'));}catch(_){}"
-        'for(var j=0;j<targets.length;j++){'
-        "var e=d.querySelector(targets[j]);"
-        "if(e&&e.style){e.style.paddingTop='0';e.style.paddingLeft='0';"
-        "e.style.paddingRight='0';e.style.marginTop='0';}}};"
-        'apply();'
-        'var h=history,W=function(n){var o=h[n];h[n]=function(){'
-        'var x=o.apply(this,arguments);'
-        'setTimeout(apply,140);setTimeout(apply,620);return x;};};'
-        "W('pushState');W('replaceState');"
-        "addEventListener('popstate',function(){setTimeout(apply,140);});"
-        'setInterval(apply,2400);'
-        '}();';
+    return r'''
+(function(){
+  var d=document,r=d.documentElement;
+  if(r.dataset.sbAvp==='y')return; r.dataset.sbAvp='y';
+  var vars=['--sat','--sar','--sab','--sal',
+    '--safe-area-inset-top','--safe-area-inset-right',
+    '--safe-area-inset-bottom','--safe-area-inset-left'];
+  var softKb=function(){
+    var v=window.visualViewport;
+    return v&&v.height<window.innerHeight*0.75;
+  };
+  var fixMeta=function(){
+    var m=d.querySelector('meta[name="viewport"]');
+    if(!m){
+      m=d.createElement('meta');
+      m.setAttribute('name','viewport');
+      (d.head||d.documentElement).appendChild(m);
+    }
+    var target=Math.min(screen.width||390, 390);
+    var scale=((screen.width||target)/target).toFixed(4);
+    m.setAttribute('content','width='+target+', initial-scale='+scale+', maximum-scale='+scale+', user-scalable=no, viewport-fit=contain');
+  };
+  var svcSelectors=['.app-header','.gameview-mobile-header'];
+  var apply=function(){
+    if(softKb())return;
+    for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],'0px','important');}
+    fixMeta();
+    try{window.dispatchEvent(new Event('resize'));}catch(_){}
+    for(var j=0;j<svcSelectors.length;j++){
+      var e=d.querySelector(svcSelectors[j]);
+      if(e&&e.style){e.style.paddingTop='0';}
+    }
+  };
+  apply();
+  var h=history,W=function(n){var o=h[n];h[n]=function(){
+    var x=o.apply(this,arguments);
+    setTimeout(apply,140);setTimeout(apply,620);return x;};};
+  W('pushState');W('replaceState');
+  addEventListener('popstate',function(){setTimeout(apply,140);});
+  setInterval(apply,2400);
+})();
+''';
   }
 
   String _inputScript() {
@@ -366,19 +392,30 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         '}();';
   }
 
-  void _injectViewportPatch() => _wv.runJavaScript(_viewportScript());
-  void _injectInputPatch()    => _wv.runJavaScript(_inputScript());
-  void _injectMediaPatch()    => _wv.runJavaScript(_mediaScript());
+  void _injectViewportPatch() {
+    if (_offlineRouted) return;
+    try { _wv.runJavaScript(_viewportScript()); } catch (_) {}
+  }
+  void _injectInputPatch() {
+    if (_offlineRouted) return;
+    try { _wv.runJavaScript(_inputScript()); } catch (_) {}
+  }
+  void _injectMediaPatch() {
+    if (_offlineRouted) return;
+    try { _wv.runJavaScript(_mediaScript()); } catch (_) {}
+  }
 
   void _refreshViewport() {
-    if (!mounted) return;
+    if (!mounted || _offlineRouted) return;
     _pinImmersive();
-    _wv.runJavaScript('!function(){'
-        "window.dispatchEvent(new Event('resize'));"
-        "if(window.visualViewport)window.visualViewport.dispatchEvent(new Event('resize'));"
-        "document.documentElement.style.height='';"
-        "if(document.body)document.body.style.height='';"
-        '}();');
+    try {
+      _wv.runJavaScript('!function(){'
+          "window.dispatchEvent(new Event('resize'));"
+          "if(window.visualViewport)window.visualViewport.dispatchEvent(new Event('resize'));"
+          "document.documentElement.style.height='';"
+          "if(document.body)document.body.style.height='';"
+          '}();');
+    } catch (_) {}
     _injectViewportPatch();
   }
 
@@ -429,9 +466,124 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
               const ColoredBox(color: Colors.black),
             if (_fullscreenOverlay != null)
               Positioned.fill(child: _fullscreenOverlay!),
+            if (_surfaceReady && _fullscreenOverlay == null)
+              Positioned(
+                top: safe.top + 8,
+                left: 12,
+                child: GestureDetector(
+                  onTap: _showSettingsSheet,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.40),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.settings_rounded,
+                      color: Colors.white54,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Settings bottom-sheet ──────────────────────────────────────────────────
+
+class _WebSettingsSheet extends StatelessWidget {
+  const _WebSettingsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewPadding.bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF14141F),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Settings',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+          const SizedBox(height: 4),
+          _SheetTile(
+            icon: Icons.privacy_tip_outlined,
+            label: 'Privacy Policy',
+            url: OracleSettings.privacyUrl,
+          ),
+          _SheetTile(
+            icon: Icons.support_agent_outlined,
+            label: 'Support',
+            url: OracleSettings.supportUrl,
+          ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetTile extends StatelessWidget {
+  const _SheetTile({
+    required this.icon,
+    required this.label,
+    required this.url,
+  });
+
+  final IconData icon;
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Icon(icon, color: const Color(0xFFD4AF37), size: 22),
+      title: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+      ),
+      trailing: const Icon(Icons.open_in_new_rounded,
+          color: Colors.white38, size: 18),
+      onTap: () async {
+        Navigator.of(context).pop();
+        try {
+          await launchUrl(
+            Uri.parse(url),
+            mode: LaunchMode.externalApplication,
+          );
+        } catch (_) {}
+      },
     );
   }
 }
