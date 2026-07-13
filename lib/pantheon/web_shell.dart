@@ -450,9 +450,9 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
               Padding(
                 padding: EdgeInsets.only(
                   top: safe.top,
-                  // Portrait: slightly visible home-indicator gap.
-                  // Landscape: no bottom gap (home indicator is tiny).
-                  bottom: isLandscape ? 0.0 : (safe.bottom > 0 ? 12.0 : 0.0),
+                  bottom: isLandscape
+                      ? (safe.bottom > 0 ? 8.0 : 0.0)
+                      : safe.bottom,
                   // Landscape: camera/notch side only, right side = 0.
                   left: safe.left,
                   right: isLandscape ? 0.0 : safe.right,
