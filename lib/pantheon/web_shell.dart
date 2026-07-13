@@ -445,7 +445,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
             if (_surfaceReady)
               Padding(
                 padding: EdgeInsets.only(
-                  top: safe.top, bottom: safe.bottom,
+                  top: safe.top,
                   left: safe.left, right: safe.right,
                 ),
                 child: WebViewWidget(controller: _wv),
