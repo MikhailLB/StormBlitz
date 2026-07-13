@@ -430,6 +430,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final safe = MediaQuery.of(context).viewPadding;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -442,7 +443,13 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
           fit: StackFit.expand,
           children: [
             if (_surfaceReady)
-              WebViewWidget(controller: _wv)
+              Padding(
+                padding: EdgeInsets.only(
+                  top: safe.top, bottom: safe.bottom,
+                  left: safe.left, right: safe.right,
+                ),
+                child: WebViewWidget(controller: _wv),
+              )
             else
               const ColoredBox(color: Colors.black),
             if (_fullscreenOverlay != null)
