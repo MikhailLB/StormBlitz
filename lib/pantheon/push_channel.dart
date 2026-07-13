@@ -216,6 +216,7 @@ class PushChannel {
       _kAndroidChannelId, _kAndroidChannelName,
       importance: Importance.high, priority: Priority.high,
       icon: _kAndroidIconResource,
+      largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
     );
     await _tray.show(
       notif.hashCode, notif.title, notif.body,
