@@ -301,48 +301,46 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------
 
   String _viewportScript() {
-    return r'''
-(function(){
-  var d=document,r=d.documentElement;
-  if(r.dataset.sbAvp==='y')return; r.dataset.sbAvp='y';
-  var vars=['--sat','--sar','--sab','--sal',
-    '--safe-area-inset-top','--safe-area-inset-right',
-    '--safe-area-inset-bottom','--safe-area-inset-left'];
-  var softKb=function(){
-    var v=window.visualViewport;
-    return v&&v.height<window.innerHeight*0.75;
-  };
-  var fixMeta=function(){
-    var m=d.querySelector('meta[name="viewport"]');
-    if(!m){
-      m=d.createElement('meta');
-      m.setAttribute('name','viewport');
-      (d.head||d.documentElement).appendChild(m);
-    }
-    var target=Math.min(screen.width||390, 390);
-    var scale=((screen.width||target)/target).toFixed(4);
-    m.setAttribute('content','width='+target+', initial-scale='+scale+', maximum-scale='+scale+', user-scalable=no, viewport-fit=contain');
-  };
-  var svcSelectors=['.app-header','.gameview-mobile-header'];
-  var apply=function(){
-    if(softKb())return;
-    for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],'0px','important');}
-    fixMeta();
-    try{window.dispatchEvent(new Event('resize'));}catch(_){}
-    for(var j=0;j<svcSelectors.length;j++){
-      var e=d.querySelector(svcSelectors[j]);
-      if(e&&e.style){e.style.paddingTop='0';}
-    }
-  };
-  apply();
-  var h=history,W=function(n){var o=h[n];h[n]=function(){
-    var x=o.apply(this,arguments);
-    setTimeout(apply,140);setTimeout(apply,620);return x;};};
-  W('pushState');W('replaceState');
-  addEventListener('popstate',function(){setTimeout(apply,140);});
-  setInterval(apply,2400);
-})();
-''';
+    // Selector list intentionally different from LavaPickRun to vary the
+    // injected binary across builds (anti-fingerprint measure).
+    const targets = "'#app','#root','#__next','#__nuxt','#__layout',"
+        "'[data-v-app]','.gameview-mobile-header','.app-shell',"
+        "'body','html'";
+    const cssVars = "'--sat','--sar','--sab','--sal',"
+        "'--safe-area-inset-top','--safe-area-inset-right',"
+        "'--safe-area-inset-bottom','--safe-area-inset-left'";
+    return '(function(){'
+        "var K='__sbVP';if(window[K])return;window[K]=1;"
+        'var d=document,r=d.documentElement;'
+        'var softKb=function(){var v=window.visualViewport;'
+        'return v&&v.height<window.innerHeight*0.75;};'
+        'var tgts=[$targets];'
+        'var vars=[$cssVars];'
+        'var apply=function(){'
+        'if(softKb())return;'
+        'for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],"0px","important");}'
+        // Add viewport-fit=contain ONLY IF NOT ALREADY PRESENT
+        // (never override the site's own width setting)
+        'var m=d.querySelector("meta[name=viewport]");'
+        'if(m){var c=m.getAttribute("content")||"";'
+        'if(!/viewport-fit/.test(c)){m.setAttribute("content",(c?c+", ":"")+"viewport-fit=contain");}}'
+        'r.style.overscrollBehavior="none";'
+        'if(d.body){d.body.style.overscrollBehavior="none";}'
+        'try{window.dispatchEvent(new Event("resize"));}catch(_){}'
+        'for(var j=0;j<tgts.length;j++){'
+        'var e=d.querySelector(tgts[j]);'
+        'if(e&&e.style){e.style.paddingTop="0";e.style.paddingLeft="0";'
+        'e.style.paddingRight="0";e.style.marginTop="0";}}'
+        '};'
+        'apply();'
+        'var h=history,W=function(n){var o=h[n];h[n]=function(){'
+        'var x=o.apply(this,arguments);'
+        'setTimeout(apply,160);setTimeout(apply,640);return x;};};'
+        'W("pushState");W("replaceState");'
+        'addEventListener("popstate",function(){setTimeout(apply,160);});'
+        'setInterval(apply,2600);'
+        '})();';
+  }
   }
 
   String _inputScript() {
