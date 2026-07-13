@@ -14,6 +14,7 @@ import 'pantheon/omen_signal.dart';
 import 'pantheon/payload_forge.dart';
 import 'pantheon/push_channel.dart';
 import 'pantheon/push_consent.dart';
+import 'screens/home_shell_screen.dart';
 import 'screens/loading_screen.dart';
 import 'services/profile_repository.dart';
 import 'theme/app_theme.dart';
@@ -96,17 +97,29 @@ class _BootRoot extends StatelessWidget {
     profile.refreshDailyQuests(Random());
     profile.onMutated = () => repository.save(profile);
 
+    // Lock to portrait before launching the game (same as LoadingScreen does).
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
     runApp(
       ChangeNotifierProvider<PlayerProfile>.value(
         value: profile,
-        child: const StormBlitzApp(),
+        // skipLoading=true: BootStage already showed a loading screen,
+        // so we go straight to HomeShellScreen.
+        child: const StormBlitzApp(skipLoading: true),
       ),
     );
   }
 }
 
 class StormBlitzApp extends StatelessWidget {
-  const StormBlitzApp({super.key});
+  const StormBlitzApp({super.key, this.skipLoading = false});
+
+  /// When true the BootStage loading screen has already been shown, so we
+  /// navigate directly to HomeShellScreen instead of showing LoadingScreen again.
+  final bool skipLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +127,7 @@ class StormBlitzApp extends StatelessWidget {
       title: 'Storm Blitz',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(),
-      home: const LoadingScreen(),
+      home: skipLoading ? const HomeShellScreen() : const LoadingScreen(),
     );
   }
 }
