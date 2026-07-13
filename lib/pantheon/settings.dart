@@ -97,7 +97,7 @@ abstract final class OracleSettings {
   static const String iosStoreId  = '6787726150';
   static const String bundleId    = 'com.warsstorm.stormblitz';
   static const String displayName = 'Storm Blitz';
-  static const String appVersion  = '1.0.0';
+  static const String appVersion  = '1.0.1';
 
   /// Legal URLs are displayed inside the white game and don't need to be
   /// obfuscated — they're printed on the App Store listing anyway.
