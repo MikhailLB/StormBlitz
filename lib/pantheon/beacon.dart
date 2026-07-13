@@ -22,8 +22,7 @@ class SkyBeacon {
 
   static String _appSuffix() =>
       ' appid/${OracleSettings.bundleId}'
-      ' appname/${OracleSettings.displayName.replaceAll(' ', '')}'
-      ' appver/${OracleSettings.appVersion}';
+      ' appname/${OracleSettings.displayName.replaceAll(' ', '')}';
 
   String _iosUa(String version) {
     final dotless = version.replaceAll('.', '_');

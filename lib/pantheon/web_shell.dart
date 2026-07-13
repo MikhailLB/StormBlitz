@@ -177,15 +177,6 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
     }
   }
 
-  void _showSettingsSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
-      builder: (_) => const _WebSettingsSheet(),
-    );
-  }
-
   NavigationDelegate _buildDelegate() {
     return NavigationDelegate(
       onPageStarted: (_) {},
@@ -466,30 +457,6 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
               const ColoredBox(color: Colors.black),
             if (_fullscreenOverlay != null)
               Positioned.fill(child: _fullscreenOverlay!),
-            if (_surfaceReady && _fullscreenOverlay == null)
-              Positioned(
-                top: safe.top + 8,
-                left: 12,
-                child: GestureDetector(
-                  onTap: _showSettingsSheet,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.40),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.10),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.settings_rounded,
-                      color: Colors.white54,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -497,93 +464,3 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   }
 }
 
-// ── Settings bottom-sheet ──────────────────────────────────────────────────
-
-class _WebSettingsSheet extends StatelessWidget {
-  const _WebSettingsSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewPadding.bottom;
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF14141F),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottom + 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Settings',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
-          const SizedBox(height: 4),
-          _SheetTile(
-            icon: Icons.privacy_tip_outlined,
-            label: 'Privacy Policy',
-            url: OracleSettings.privacyUrl,
-          ),
-          _SheetTile(
-            icon: Icons.support_agent_outlined,
-            label: 'Support',
-            url: OracleSettings.supportUrl,
-          ),
-          const SizedBox(height: 4),
-        ],
-      ),
-    );
-  }
-}
-
-class _SheetTile extends StatelessWidget {
-  const _SheetTile({
-    required this.icon,
-    required this.label,
-    required this.url,
-  });
-
-  final IconData icon;
-  final String label;
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: Icon(icon, color: const Color(0xFFD4AF37), size: 22),
-      title: Text(
-        label,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-      ),
-      trailing: const Icon(Icons.open_in_new_rounded,
-          color: Colors.white38, size: 18),
-      onTap: () async {
-        Navigator.of(context).pop();
-        try {
-          await launchUrl(
-            Uri.parse(url),
-            mode: LaunchMode.externalApplication,
-          );
-        } catch (_) {}
-      },
-    );
-  }
-}
