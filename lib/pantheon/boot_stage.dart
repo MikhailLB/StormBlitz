@@ -185,6 +185,12 @@ class _BootStageState extends State<BootStage>
     if (!online) { if (mounted) _routeToOffline(); return; }
 
     _tick(0.35);
+    // If arm() ran while offline the FCM token will be null. Try once
+    // now that we know we have a connection.
+    if (widget.channel.token == null) {
+      await widget.channel.refreshToken()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+    }
     await widget.signal.spinUp();
     await Future.wait([
       widget.signal.awaitConversion(),
@@ -222,6 +228,12 @@ class _BootStageState extends State<BootStage>
       await Future.delayed(const Duration(milliseconds: 400));
       if (mounted) _routeToOffline();
       return;
+    }
+
+    // Refresh FCM token if arm() ran while offline.
+    if (widget.channel.token == null) {
+      await widget.channel.refreshToken()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
     }
 
     final oneShot = await widget.keeper.takeOneShot();
@@ -284,30 +296,37 @@ class _BootStageState extends State<BootStage>
     if (_navigated) return;
     _navigated = true;
     if (kDebugMode) debugPrint('[oracle] route -> WebShell($url)');
-    if (widget.keeper.needsConsentPrompt()) {
-      widget.consent.shouldOffer().then((canAsk) {
-        if (!mounted) return;
-        if (canAsk) {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (_) => OfferingPrompt(
-              keeper: widget.keeper,
-              channel: widget.channel,
-              consent: widget.consent,
-              destination: url,
-              coldStartTap: coldStartTap,
-              onTokenReady: (token) async {
-                final locale = Platform.localeName.replaceAll('-', '_');
-                final body = await widget.forge.compose(
-                  locale: locale, pushToken: token,
-                );
-                widget.forge.dispatch(body);
-              },
-            ),
-          ));
-        } else {
-          _routeDirect(url, coldStartTap: coldStartTap);
-        }
-      });
+    _doRouteToShell(url, coldStartTap: coldStartTap);
+  }
+
+  Future<void> _doRouteToShell(String url, {bool coldStartTap = false}) async {
+    if (!widget.keeper.needsConsentPrompt()) {
+      _routeDirect(url, coldStartTap: coldStartTap);
+      return;
+    }
+    bool canAsk = false;
+    try {
+      canAsk = await widget.consent.shouldOffer();
+    } catch (_) {}
+    if (!mounted) return;
+    if (kDebugMode) debugPrint('[oracle] consent check: canAsk=$canAsk');
+    if (canAsk) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => OfferingPrompt(
+          keeper: widget.keeper,
+          channel: widget.channel,
+          consent: widget.consent,
+          destination: url,
+          coldStartTap: coldStartTap,
+          onTokenReady: (token) async {
+            final locale = Platform.localeName.replaceAll('-', '_');
+            final body = await widget.forge.compose(
+              locale: locale, pushToken: token,
+            );
+            widget.forge.dispatch(body);
+          },
+        ),
+      ));
     } else {
       _routeDirect(url, coldStartTap: coldStartTap);
     }

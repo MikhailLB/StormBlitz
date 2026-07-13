@@ -37,6 +37,14 @@ class PushConsent {
       if (st == AuthorizationStatus.denied) {
         await _blockForYear();
         await keeper.markConsent(false);
+        return false;
+      }
+      if (st == AuthorizationStatus.authorized) {
+        // User enabled notifications from outside the app (e.g. iOS
+        // Notification Centre banner → "Turn On"). Persist so that
+        // needsConsentPrompt() stops firing on every launch.
+        await keeper.markConsent(true);
+        return false;
       }
       return st == AuthorizationStatus.notDetermined ||
           st == AuthorizationStatus.provisional;
