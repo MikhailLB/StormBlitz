@@ -322,10 +322,12 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         // Overscroll bounce disable
         'r.style.overscrollBehavior="none";'
         'if(d.body){d.body.style.overscrollBehavior="none";}'
-        // Add viewport-fit=contain if missing — never override width
+        // Patch viewport: add viewport-fit=contain and user-scalable=no
         'var m=d.querySelector("meta[name=viewport]");'
         'if(m){var c=m.getAttribute("content")||"";'
-        'if(!/viewport-fit/.test(c)){m.setAttribute("content",(c?c+", ":"")+"viewport-fit=contain");}}'
+        'if(!/viewport-fit/.test(c)){c=(c?c+", ":"")+"viewport-fit=contain";}'
+        'if(!/user-scalable/.test(c)){c=(c?c+", ":"")+"user-scalable=no, maximum-scale=1.0, minimum-scale=1.0";}'
+        'm.setAttribute("content",c);}'
         'try{window.dispatchEvent(new Event("resize"));}catch(_){}'
         // Only zero padding-top on service wrapper elements, nothing else
         'for(var j=0;j<wraps.length;j++){'
@@ -445,8 +447,10 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
             if (_surfaceReady)
               Padding(
                 padding: EdgeInsets.only(
-                  top: safe.top, bottom: safe.bottom,
-                  left: safe.left, right: safe.right,
+                  top: safe.top,
+                  bottom: safe.bottom > 0 ? 4.0 : 0.0,
+                  left: safe.left,
+                  right: safe.right,
                 ),
                 child: WebViewWidget(controller: _wv),
               )
