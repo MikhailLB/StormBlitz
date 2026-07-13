@@ -20,17 +20,24 @@ class SkyBeacon {
   // User-Agent
   // -----------------------------------------------------------------
 
+  static String _appSuffix() =>
+      ' appid/${OracleSettings.bundleId}'
+      ' appname/${OracleSettings.displayName.replaceAll(' ', '')}'
+      ' appver/${OracleSettings.appVersion}';
+
   String _iosUa(String version) {
     final dotless = version.replaceAll('.', '_');
     return 'Mozilla/5.0 (iPhone; CPU iPhone OS $dotless like Mac OS X) '
         'AppleWebKit/${uaWebkitVersion()} (KHTML, like Gecko) '
-        'Version/$version Mobile/15E148 Safari/${uaWebkitVersion()}';
+        'Version/$version Mobile/15E148 Safari/${uaWebkitVersion()}'
+        '${_appSuffix()}';
   }
 
   String _androidUa(String major) =>
       'Mozilla/5.0 (Linux; Android $major; Pixel 8 Build/UD1A.230803.041) '
       'AppleWebKit/537.36 (KHTML, like Gecko) '
-      'Chrome/${uaChromeVersion()} Mobile Safari/537.36';
+      'Chrome/${uaChromeVersion()} Mobile Safari/537.36'
+      '${_appSuffix()}';
 
   String _fallbackUa() =>
       Platform.isAndroid ? _androidUa('14') : _iosUa('17.5');
