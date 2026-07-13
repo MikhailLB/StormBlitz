@@ -12,7 +12,7 @@ import 'keeper.dart';
 const _kAndroidChannelId    = 'sb_push_main';
 const _kAndroidChannelName  = 'Storm Blitz Updates';
 const _kAndroidChannelDesc  = 'Storm Blitz real-time updates';
-const _kAndroidIconResource = '@drawable/ic_storm_notification';
+const _kAndroidIconResource = '@mipmap/ic_launcher';
 
 const List<String> _urlKeys = <String>[
   'url', 'link', 'target', 'deeplink', 'deep_link',
@@ -216,7 +216,6 @@ class PushChannel {
       _kAndroidChannelId, _kAndroidChannelName,
       importance: Importance.high, priority: Priority.high,
       icon: _kAndroidIconResource,
-      largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
     );
     await _tray.show(
       notif.hashCode, notif.title, notif.body,
