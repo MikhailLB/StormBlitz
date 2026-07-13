@@ -794,7 +794,6 @@
 		BB0000010000000000000DBB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UUSFRGRC2J;
 				ENABLE_BITCODE = NO;
@@ -814,7 +813,6 @@
 		BB0000010000000000000EBB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UUSFRGRC2J;
 				ENABLE_BITCODE = NO;
@@ -833,7 +831,6 @@
 		BB0000010000000000000FBB /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UUSFRGRC2J;
 				ENABLE_BITCODE = NO;
