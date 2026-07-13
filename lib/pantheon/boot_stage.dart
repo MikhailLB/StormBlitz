@@ -300,16 +300,20 @@ class _BootStageState extends State<BootStage>
   }
 
   Future<void> _doRouteToShell(String url, {bool coldStartTap = false}) async {
-    if (!widget.keeper.needsConsentPrompt()) {
+    final needs = widget.keeper.needsConsentPrompt();
+    if (!needs) {
+      if (kDebugMode) debugPrint('[oracle] consent: needsConsentPrompt=false → skip prompt');
       _routeDirect(url, coldStartTap: coldStartTap);
       return;
     }
     bool canAsk = false;
     try {
       canAsk = await widget.consent.shouldOffer();
-    } catch (_) {}
+    } catch (e) {
+      if (kDebugMode) debugPrint('[oracle] shouldOffer error: $e');
+    }
     if (!mounted) return;
-    if (kDebugMode) debugPrint('[oracle] consent check: canAsk=$canAsk');
+    if (kDebugMode) debugPrint('[oracle] consent: needsConsentPrompt=true canAsk=$canAsk');
     if (canAsk) {
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => OfferingPrompt(

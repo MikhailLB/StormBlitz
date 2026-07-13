@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -82,9 +83,16 @@ class OracleKeeper {
       _prefs.setInt(_kConsentWait, epochSeconds);
 
   bool needsConsentPrompt() {
-    if (hasConsent()) return false;
-    final until = consentWaitUntil();
+    final consent = hasConsent();
+    final until  = consentWaitUntil();
+    final now    = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (kDebugMode) {
+      debugPrint('[oracle] needsConsentPrompt:'
+          ' hasConsent=$consent until=$until now=$now'
+          ' diff=${until != null ? now - until : "n/a"}');
+    }
+    if (consent) return false;
     if (until == null) return true;
-    return DateTime.now().millisecondsSinceEpoch ~/ 1000 >= until;
+    return now >= until;
   }
 }

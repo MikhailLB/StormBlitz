@@ -34,16 +34,16 @@ class PushConsent {
       }
       final s = await fcm.getNotificationSettings();
       final st = s.authorizationStatus;
+      if (kDebugMode) debugPrint('[oracle] shouldOffer: iOS status=$st');
       if (st == AuthorizationStatus.denied) {
         await _blockForYear();
         await keeper.markConsent(false);
         return false;
       }
       if (st == AuthorizationStatus.authorized) {
-        // User enabled notifications from outside the app (e.g. iOS
-        // Notification Centre banner → "Turn On"). Persist so that
-        // needsConsentPrompt() stops firing on every launch.
-        await keeper.markConsent(true);
+        // Notifications already granted — no need to show our prompt.
+        // Do NOT markConsent(true) here: let the user's explicit "Allow"
+        // tap remain the only path that sets the consent flag.
         return false;
       }
       return st == AuthorizationStatus.notDetermined ||
