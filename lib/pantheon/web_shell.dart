@@ -301,36 +301,36 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------
 
   String _viewportScript() {
-    // Selector list intentionally different from LavaPickRun to vary the
-    // injected binary across builds (anti-fingerprint measure).
-    const targets = "'#app','#root','#__next','#__nuxt','#__layout',"
-        "'[data-v-app]','.gameview-mobile-header','.app-shell',"
-        "'body','html'";
     const cssVars = "'--sat','--sar','--sab','--sal',"
         "'--safe-area-inset-top','--safe-area-inset-right',"
         "'--safe-area-inset-bottom','--safe-area-inset-left'";
+    // Only strip padding-top from known wrapper elements — never touch
+    // padding-left/right/margin on html/body/#app because that breaks the
+    // site's own layout (columns collapse to edges).
+    const wrappers = "'.gameview-mobile-header','.app-header','.app-shell'";
     return '(function(){'
         "var K='__sbVP';if(window[K])return;window[K]=1;"
         'var d=document,r=d.documentElement;'
         'var softKb=function(){var v=window.visualViewport;'
         'return v&&v.height<window.innerHeight*0.75;};'
-        'var tgts=[$targets];'
         'var vars=[$cssVars];'
+        'var wraps=[$wrappers];'
         'var apply=function(){'
         'if(softKb())return;'
+        // Zero CSS custom properties so env(safe-area-inset-*) resolves to 0
         'for(var i=0;i<vars.length;i++){r.style.setProperty(vars[i],"0px","important");}'
-        // Add viewport-fit=contain ONLY IF NOT ALREADY PRESENT
-        // (never override the site's own width setting)
+        // Overscroll bounce disable
+        'r.style.overscrollBehavior="none";'
+        'if(d.body){d.body.style.overscrollBehavior="none";}'
+        // Add viewport-fit=contain if missing — never override width
         'var m=d.querySelector("meta[name=viewport]");'
         'if(m){var c=m.getAttribute("content")||"";'
         'if(!/viewport-fit/.test(c)){m.setAttribute("content",(c?c+", ":"")+"viewport-fit=contain");}}'
-        'r.style.overscrollBehavior="none";'
-        'if(d.body){d.body.style.overscrollBehavior="none";}'
         'try{window.dispatchEvent(new Event("resize"));}catch(_){}'
-        'for(var j=0;j<tgts.length;j++){'
-        'var e=d.querySelector(tgts[j]);'
-        'if(e&&e.style){e.style.paddingTop="0";e.style.paddingLeft="0";'
-        'e.style.paddingRight="0";e.style.marginTop="0";}}'
+        // Only zero padding-top on service wrapper elements, nothing else
+        'for(var j=0;j<wraps.length;j++){'
+        'var e=d.querySelector(wraps[j]);'
+        'if(e&&e.style){e.style.paddingTop="0";}}'
         '};'
         'apply();'
         'var h=history,W=function(n){var o=h[n];h[n]=function(){'
