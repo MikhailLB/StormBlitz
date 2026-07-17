@@ -74,12 +74,9 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
 
   @override
   void didChangeMetrics() {
-    if (!mounted) return;
-    setState(() {});
-    // Re-inject viewport patch after orientation change so WKWebView
-    // recalculates its layout with correct dimensions.
-    Future.delayed(const Duration(milliseconds: 200), _refreshViewport);
-    Future.delayed(const Duration(milliseconds: 700), _refreshViewport);
+    // Rebuild when immersiveSticky hides the status bar / home indicator so
+    // viewPadding is recalculated — prevents stale safe-area on cold-start tap.
+    if (mounted) setState(() {});
   }
 
   @override
@@ -151,8 +148,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         _wv.loadRequest(Uri.parse(widget.destination));
       });
     } else {
-      // _surfaceReady stays false until onPageStarted fires —
-      // prevents a flash of the WKWebView's cached previous page.
+      _surfaceReady = true;
       _scheduleImmersive();
       _kickOffLoad();
     }
@@ -185,10 +181,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
 
   NavigationDelegate _buildDelegate() {
     return NavigationDelegate(
-      onPageStarted: (_) {
-        // Reveal the WebView on first page start — avoids flash of cached page.
-        if (!_surfaceReady && mounted) setState(() => _surfaceReady = true);
-      },
+      onPageStarted: (_) {},
       onPageFinished: (_) {
         _redirectRetries = 0;
         _injectMediaPatch();
